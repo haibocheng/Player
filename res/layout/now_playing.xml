@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent">
+
+    	<TextView
+    		android:id="@+id/track_progress"
+	        android:layout_width="wrap_content"
+        	android:layout_height="wrap_content"
+        	android:text="left"
+    		/>
+    
+    	<TextView
+    		android:id="@+id/track_duration"
+	        android:layout_width="wrap_content"
+    	    android:layout_height="wrap_content"
+    		android:layout_alignParentRight="true"
+        	android:text="right"
+    		/>
+      		
+		<SeekBar 
+			android:id="@+id/track_seek" 
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content" 
+			android:layout_below="@id/track_progress"
+			/>
+ 
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/buttons_layout"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_alignParentBottom="true" android:gravity="fill">
+
+   	    <Button 
+	    	android:id="@+id/next_button"
+	        android:layout_width="wrap_content"
+	    	android:layout_height="wrap_content"
+	    	android:layout_alignParentRight="true"  
+	    	android:text="@+string/next_track_button" 
+	    	/>
+	    <Button 
+	    	android:id="@+id/play_button"
+	    	android:text="Play"
+	        android:layout_width="wrap_content"
+	    	android:layout_height="wrap_content"
+	    	android:layout_toLeftOf="@id/next_button"
+	    	 
+	    	/>
+	    <Button 
+	    	android:id="@+id/prev_button"
+	        android:layout_height="wrap_content" 
+	    	android:text="@+string/prev_track_button"
+	    	android:layout_alignParentLeft="true"
+	    	android:layout_width="wrap_content"/>
+	    	
+	   </RelativeLayout>
+	    	 
+		<ListView 
+			android:id="@+id/tracklist"		 
+			android:layout_width="fill_parent"
+			android:layout_height="fill_parent"
+			android:layout_below="@id/track_seek"
+			android:layout_above="@id/buttons_layout"
+			
+			/>
+		
+</RelativeLayout>

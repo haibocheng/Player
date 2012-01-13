@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Player</string>
+    
+    <string name="act_now_playing">Now playing</string>
+    <string name="act_library_browser">Library</string>
+    <string name="act_file_browser">File browser</string>
+    
+    <string name="tracklist">Tracklist</string>
+    <string name="add_tracks_button">Add tracks</string>
+    <string name="play_button">Play</string>
+    <string name="prev_track_button">←</string>
+    <string name="next_track_button">→</string>
+    <string name="pause_button">Pause</string>
+    <string name="clear_tracklist">Clear</string>
+    <string name="settings">Settings</string>
+</resources>
