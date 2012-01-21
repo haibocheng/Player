@@ -5,7 +5,9 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ComponentName;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
@@ -38,6 +40,7 @@ public class NowPlayingActivity extends Activity {
 	private SeekBar trackSeek;
 	private ListView tracklistView;
 	private TextView currentTrackProgressView, currentTrackDurationView;
+	private AlertDialog alertDialog;
 	private ArrayAdapter<Track> tracklistAdapter;	
 	private PlayerServiceConnection playerServiceConnection;
 	private PlayerService playerService;
@@ -154,7 +157,7 @@ public class NowPlayingActivity extends Activity {
     			holder.title.setText(title);
     			holder.artist.setText(artist);
     			holder.duration.setText(Track.formatDuration(track.getDuration()));
-    			if (pos == playerService.getCurrentTrack()) {
+    			if (pos == playerService.getCurrentTrackPosition()) {
     				holder.playicon.setImageResource(R.drawable.playicon);
     			} else {
     				holder.playicon.setImageDrawable(null);
@@ -185,11 +188,15 @@ public class NowPlayingActivity extends Activity {
     @Override
     protected void onStop() {
     	super.onStop();
-    	synchronized (playerService) {
-    		playerService.notifyAll();
-    		uiRefresher.done();
+    	if (playerService != null) {
+    		synchronized (playerService) {
+    			playerService.notifyAll();
+    			uiRefresher.done();
+    		}
     	}
-    	playerService.storeTracklist();
+    	if (playerService != null) {
+    		playerService.storeTracklist();
+    	}
     	getApplicationContext().unbindService(playerServiceConnection);
     }
     
@@ -227,7 +234,7 @@ public class NowPlayingActivity extends Activity {
     public void refreshTracklist() {
 
     	final ArrayList<Track> currentTracks = playerService.getCurrentTracks();
-    	final int currentTrack = playerService.getCurrentTrack();
+    	final int currentTrackPosition = playerService.getCurrentTrackPosition();
 		runOnUiThread(new Runnable() {
 
 			@Override
@@ -237,7 +244,7 @@ public class NowPlayingActivity extends Activity {
 		    		tracklistAdapter.add(t);
 		    	}
 		    	tracklistAdapter.notifyDataSetChanged();
-		    	tracklistView.setSelection(currentTrack);
+		    	tracklistView.setSelection(currentTrackPosition);
 			}
 		});
     }
@@ -275,7 +282,18 @@ public class NowPlayingActivity extends Activity {
     		playerService.deleteTrack(info.position);
     	break;
     	case R.id.track_menu_info:
-    		
+    		Track currentTrack = playerService.getTrack(info.position);
+    		String message = "Artist: "+currentTrack.getArtist()+"\nAlbum: "+currentTrack.getAlbum()+"\nYear: "+currentTrack.getYear()+"\nGenre: "+currentTrack.getGenre();
+    		alertDialog = new AlertDialog.Builder(this).create();
+    		alertDialog.setMessage(message);
+    		alertDialog.setButton("OK", new DialogInterface.OnClickListener() {
+				
+				@Override
+				public void onClick(DialogInterface arg0, int arg1) {
+					alertDialog.dismiss();
+				}
+			});
+    		alertDialog.show();
     	break;
     	}
     	return super.onContextItemSelected(item);

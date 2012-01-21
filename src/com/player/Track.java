@@ -14,7 +14,7 @@ import org.jaudiotagger.tag.TagException;
 
 public class Track {
 
-	private String path, artist, album, year, title;
+	private String path, artist, album, year, title, genre;
 	private int duration = 0;
 	
 	public Track(File f) {
@@ -26,6 +26,7 @@ public class Track {
 			album = t.getFirst(FieldKey.ALBUM);
 			year = t.getFirst(FieldKey.YEAR);
 			title = t.getFirst(FieldKey.TITLE);
+			genre = t.getFirst(FieldKey.GENRE);
 			duration = af.getAudioHeader().getTrackLength()*1000;
 		} catch (CannotReadException e) {
 			e.printStackTrace();
@@ -73,6 +74,10 @@ public class Track {
 	
 	public String getTitle() {
 		return title;
+	}
+	
+	public String getGenre() {
+		return genre;
 	}
 	
 	public void setDuration(int d) {

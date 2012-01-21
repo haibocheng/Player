@@ -14,7 +14,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.os.Binder;
-import android.os.Handler;
 import android.os.IBinder;
 
 public class PlayerService extends Service {
@@ -23,7 +22,7 @@ public class PlayerService extends Service {
 	
 	private MediaPlayer mediaPlayer;
 	private ArrayList<Track> currentTracks;
-	private int currentTrack;
+	private int currentTrackPosition;
 	private int status;
 	private boolean taken;
 	private IBinder playerBinder;
@@ -34,7 +33,7 @@ public class PlayerService extends Service {
 
 		mediaPlayer = new MediaPlayer();
 		currentTracks = new ArrayList<Track>();
-		currentTrack = -1;
+		currentTrackPosition = -1;
 		status = STOPED;
 		playerBinder = new PlayerBinder();
 		
@@ -50,14 +49,13 @@ public class PlayerService extends Service {
 			
 			@Override
 			public void onCompletion(MediaPlayer arg0) {
-				if (currentTrack == -2 || currentTrack == currentTracks.size()-1) {
+				if (currentTrackPosition == -2 || currentTrackPosition == currentTracks.size()-1) {
 					stop();
 				} else {
 					nextTrack();
 				}
 			}
-		});
-		
+		});		
 	}
 
 	@Override
@@ -85,8 +83,20 @@ public class PlayerService extends Service {
 		return currentTracks;
 	}
 	
-	public int getCurrentTrack() {
-		return currentTrack;
+	public Track getTrack(int pos) {
+		return currentTracks.get(pos);
+	}
+	
+	public Track getCurrentTrack() {
+		if (currentTrackPosition < 0) {
+			return null;
+		} else {
+			return currentTracks.get(currentTrackPosition);
+		}
+	}
+	
+	public int getCurrentTrackPosition() {
+		return currentTrackPosition;
 	}
 	
 	public void addTrack(File track) {
@@ -95,14 +105,14 @@ public class PlayerService extends Service {
 	}
 	
 	public void deleteTrack(int pos) {
-		if (pos < currentTrack) currentTrack--;
-		if (pos == currentTrack) currentTrack = -2;
+		if (pos < currentTrackPosition) currentTrackPosition--;
+		if (pos == currentTrackPosition) currentTrackPosition = -2;
 		currentTracks.remove(pos);
 		untake();
 	}
 	
 	public void clearTracklist() {
-		if (currentTrack >= 0) currentTrack = -2;
+		if (currentTrackPosition >= 0) currentTrackPosition = -2;
 		currentTracks.clear();
 		untake();
 	}
@@ -127,7 +137,7 @@ public class PlayerService extends Service {
 			e.printStackTrace();
 		}
 		mediaPlayer.start();
-		currentTrack = pos;
+		currentTrackPosition = pos;
 		status = PLAYING;
 		untake();
 	}
@@ -164,20 +174,20 @@ public class PlayerService extends Service {
 	public void stop() {
 		mediaPlayer.stop();
 		mediaPlayer.reset();
-		currentTrack = -1;
+		currentTrackPosition = -1;
 		status = STOPED;
 		untake();
 	}
 	
 	public void nextTrack() {
-		if (currentTrack < currentTracks.size()-1) {
-			playTrack(currentTrack+1);
+		if (currentTrackPosition < currentTracks.size()-1) {
+			playTrack(currentTrackPosition+1);
 		}		
 	}
 	
 	public void prevTrack() {
-		if (currentTrack > 0) {
-			playTrack(currentTrack-1);
+		if (currentTrackPosition > 0) {
+			playTrack(currentTrackPosition-1);
 		}
 	}
 	
@@ -199,7 +209,7 @@ public class PlayerService extends Service {
 		case STOPED:
 			return 0;
 		default:
-			return currentTracks.get(currentTrack).getDuration();
+			return currentTracks.get(currentTrackPosition).getDuration();
 		}
 	}
 	
