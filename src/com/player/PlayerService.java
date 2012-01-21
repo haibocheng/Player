@@ -7,22 +7,19 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import android.app.Service;
-import android.content.BroadcastReceiver;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
-import android.widget.Toast;
 
 public class PlayerService extends Service {
 	
-	final static public int STOPED = 0, PLAYING = 1, PAUSED = 2;
+	static public final int STOPED = 0, PLAYING = 1, PAUSED = 2;
 	
 	private MediaPlayer mediaPlayer;
 	private ArrayList<Track> currentTracks;
@@ -30,7 +27,7 @@ public class PlayerService extends Service {
 	private int status;
 	private boolean taken;
 	private IBinder playerBinder;
-
+	
 	@Override
 	public void onCreate() {
 		super.onCreate();
@@ -61,12 +58,16 @@ public class PlayerService extends Service {
 			}
 		});
 		
-		untake();		
 	}
 
 	@Override
 	public IBinder onBind(Intent intent) {
 		return playerBinder;	    
+	}
+	
+	@Override
+	public boolean onUnbind(Intent intent) {
+		return super.onUnbind(intent);
 	}
 
 	public void take() {
@@ -90,18 +91,20 @@ public class PlayerService extends Service {
 	
 	public void addTrack(File track) {
 		currentTracks.add(new Track(track));
-		currentTracks.get(currentTracks.size()-1).setDuration(0);
+		untake();
 	}
 	
 	public void deleteTrack(int pos) {
 		if (pos < currentTrack) currentTrack--;
 		if (pos == currentTrack) currentTrack = -2;
 		currentTracks.remove(pos);
+		untake();
 	}
 	
 	public void clearTracklist() {
 		if (currentTrack >= 0) currentTrack = -2;
 		currentTracks.clear();
+		untake();
 	}
 	
 	public void playTrack(int pos) {
@@ -183,11 +186,21 @@ public class PlayerService extends Service {
 	}
 	
 	public int getCurrentPosition() {
-		return mediaPlayer.getCurrentPosition();
+		switch (status) {
+		case STOPED:
+			return 0;
+		default:
+			return mediaPlayer.getCurrentPosition();
+		}
 	}
 	
 	public int getCurrentTrackDuration() {
-		return mediaPlayer.getDuration();
+		switch (status) {
+		case STOPED:
+			return 0;
+		default:
+			return currentTracks.get(currentTrack).getDuration();
+		}
 	}
 	
 	public void seek(int s) {

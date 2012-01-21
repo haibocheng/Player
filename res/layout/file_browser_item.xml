@@ -1,27 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+
+<RelativeLayout
 	xmlns:android="http://schemas.android.com/apk/res/android"
-	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
-	android:paddingTop="5dip"
-	android:paddingBottom="5dip"
-	android:gravity="center_vertical">
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	>
 	
 	<ImageView
 		android:id="@+id/file_browser_file_icon"
 	    android:layout_width="wrap_content"
-	    android:paddingLeft="4dip"
-	    android:paddingRight="10dip"
 	    android:layout_height="wrap_content"
-	    android:src="@drawable/icon"
+	    android:layout_alignParentLeft="true"
+	    android:paddingLeft="5dip"
+	    android:paddingTop="5dip"
+	    android:paddingBottom="5dip"
+	    android:paddingRight="10dip"
 	    />
 	        
 	<TextView 
-		xmlns:android="http://schemas.android.com/apk/res/android"
     	android:id="@+id/file_browser_file_name"
-    	android:layout_width="match_parent"
+    	android:layout_width="wrap_content"
     	android:layout_height="wrap_content"
-    	android:textSize="16dip"
+    	android:layout_toRightOf="@id/file_browser_file_icon"
+    	android:layout_centerVertical="true"
+    	android:textSize="18dip"
     	/>
     	
-</LinearLayout>
+</RelativeLayout>

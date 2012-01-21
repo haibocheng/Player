@@ -1,12 +1,13 @@
 package com.player;
 
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.ContextMenu;
@@ -23,48 +24,57 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
-import android.widget.TableLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.player.PlayerService.PlayerBinder;
 
 public class NowPlayingActivity extends Activity {
 
-	private Button addTracksButton, playButton, prevButton, nextButton;
+	private Button playButton, stopButton, prevButton, nextButton;
 	private SeekBar trackSeek;
 	private ListView tracklistView;
 	private TextView currentTrackProgressView, currentTrackDurationView;
 	private ArrayAdapter<Track> tracklistAdapter;	
-	private PlayerServiceConnection playerServiceConnection = new PlayerServiceConnection();
-	private PlayerService playerService = null;
-    private UiRefresher uiRefresher = null;
-    private TrackRefresher trackRefresher = null;
-    private Object uiUpdaterMonitor = new Object(), trackUpdaterMonitor = new Object();
+	private PlayerServiceConnection playerServiceConnection;
+	private PlayerService playerService;
+    private UiRefresher uiRefresher;
+    private Timer progressRefresher;
+    private int playerStatus;
     
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.now_playing);
 
+        playerServiceConnection = new PlayerServiceConnection();
+        progressRefresher = new Timer();
+
         tracklistView = (ListView)findViewById(R.id.tracklist);
         playButton = (Button)findViewById(R.id.play_button);
+        stopButton = (Button)findViewById(R.id.stop_button);
         prevButton = (Button)findViewById(R.id.prev_button);
         nextButton = (Button)findViewById(R.id.next_button);
         trackSeek = (SeekBar)findViewById(R.id.track_seek);
         currentTrackProgressView = (TextView)findViewById(R.id.track_progress);
         currentTrackDurationView = (TextView)findViewById(R.id.track_duration);
-       
-        registerForContextMenu(tracklistView);
-        
+               
+        registerForContextMenu(tracklistView);        
         playButton.setOnClickListener(new OnClickListener() {
 			
 			@Override
 			public void onClick(View arg0) {
 				playerService.play();
+			}		
+		});
+        stopButton.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View arg0) {
+				playerService.stop();
 			}		
 		});
         prevButton.setOnClickListener(new OnClickListener() {
@@ -91,14 +101,6 @@ public class NowPlayingActivity extends Activity {
         trackSeek.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
 			
 			@Override
-			public void onStopTrackingTouch(SeekBar arg0) {
-			}
-			
-			@Override
-			public void onStartTrackingTouch(SeekBar arg0) {
-			}
-			
-			@Override
 			public void onProgressChanged(SeekBar arg0, final int pos, boolean user) {
 				runOnUiThread(new Runnable() {
 					
@@ -111,34 +113,51 @@ public class NowPlayingActivity extends Activity {
 					playerService.seek(pos);
 				} 
 			}		
+			
+			@Override
+			public void onStopTrackingTouch(SeekBar arg0) {
+			}
+			
+			@Override
+			public void onStartTrackingTouch(SeekBar arg0) {
+			}
 		});
-
-    	tracklistAdapter = new ArrayAdapter<Track>(this, R.layout.tracklist_item, R.id.tracklist_title) {
+        progressRefresher.schedule(new TimerTask() {
+			
+			@Override
+			public void run() {
+				if (playerStatus == PlayerService.PLAYING) {
+					refreshTrack();
+				}
+			}
+		}, 0, 500);		
+    	tracklistAdapter = new ArrayAdapter<Track>(this, R.layout.tracklist_item, 0) {
     		
     		@Override
     		public View getView(int pos, View convertView, ViewGroup parent) {
     			View v = convertView;
     			ViewHolder holder = null;
-    			
     			if (v == null) {
     				LayoutInflater inflater = (LayoutInflater)getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
     				v = inflater.inflate(R.layout.tracklist_item, null);
     				holder = new ViewHolder();
-    				holder.trackTitle = (TextView)v.findViewById(R.id.tracklist_title);
-    				holder.trackDetails = (TextView)v.findViewById(R.id.tracklist_details);
-    				holder.trackTable = (TableLayout)v.findViewById(R.id.tracklist_item);
+    				holder.title = (TextView)v.findViewById(R.id.tracklist_item_title);
+    				holder.artist = (TextView)v.findViewById(R.id.tracklist_item_artist);
+    				holder.duration = (TextView)v.findViewById(R.id.tracklist_item_duration);
+    				holder.playicon = (ImageView)v.findViewById(R.id.tracklist_item_playicon);
     				v.setTag(holder);
     			} else {
     				holder = (ViewHolder)v.getTag();
     			}
-    			
-    			Track track = getItem(pos);    			
-    			holder.trackTitle.setText(Integer.toString(pos+1)+". "+track.getTitle());
-    			holder.trackDetails.setText(track.getArtist()+" / "+track.getYear()+" - "+track.getAlbum());
+    			Track track = getItem(pos);
+    			String title = track.getTitle(), artist = track.getArtist();
+    			holder.title.setText(title);
+    			holder.artist.setText(artist);
+    			holder.duration.setText(Track.formatDuration(track.getDuration()));
     			if (pos == playerService.getCurrentTrack()) {
-    				holder.trackTable.setBackgroundColor(Color.DKGRAY);
+    				holder.playicon.setImageResource(R.drawable.playicon);
     			} else {
-    				holder.trackTable.setBackgroundColor(Color.BLACK);
+    				holder.playicon.setImageDrawable(null);
     			}
     			return v;
     		}
@@ -149,17 +168,11 @@ public class NowPlayingActivity extends Activity {
     @Override
     protected void onResume() {
     	super.onResume();
-		uiRefresher = new UiRefresher();
-		trackRefresher = new TrackRefresher();
-        (new Thread(uiRefresher)).start();
-        (new Thread(trackRefresher)).start();
     }
     
     @Override
     protected void onPause() {
     	super.onPause();
-    	uiRefresher.done();
-    	trackRefresher.done();
     }
     
     @Override
@@ -172,6 +185,10 @@ public class NowPlayingActivity extends Activity {
     @Override
     protected void onStop() {
     	super.onStop();
+    	synchronized (playerService) {
+    		playerService.notifyAll();
+    		uiRefresher.done();
+    	}
     	playerService.storeTracklist();
     	getApplicationContext().unbindService(playerServiceConnection);
     }
@@ -179,61 +196,38 @@ public class NowPlayingActivity extends Activity {
     public class PlayerServiceConnection implements ServiceConnection {
 		
 		@Override
-		public void onServiceDisconnected(ComponentName arg0) {
+		public void onServiceConnected(ComponentName arg0, IBinder service) {
+			PlayerBinder playerBinder = (PlayerBinder)service;
+			playerService = playerBinder.getService();
+			uiRefresher = new UiRefresher();
+	        (new Thread(uiRefresher)).start();
 		}
 		
 		@Override
-		public void onServiceConnected(ComponentName arg0, IBinder service) {
-			synchronized (uiUpdaterMonitor) {
-				PlayerBinder playerBinder = (PlayerBinder)service;
-				playerService = playerBinder.getService();
-				playerService.untake();
-				uiUpdaterMonitor.notifyAll();				
-			}
-			synchronized (trackUpdaterMonitor) {
-				trackUpdaterMonitor.notifyAll();
-			}
+		public void onServiceDisconnected(ComponentName arg0) {
 		}
 	};
 	
     public void refreshTrack() {
     	
-		if (playerService.getStatus() == PlayerService.STOPED) {
-			final int progress = 0, max = 0;
-			final boolean enabled = false;
-			final String durationText = "", progressText = "";
-			runOnUiThread(new Runnable() {
-
-				@Override
-				public void run() {							
-					trackSeek.setProgress(progress);
-					trackSeek.setMax(max);
-					trackSeek.setEnabled(enabled);
-					currentTrackDurationView.setText(durationText);
-					currentTrackProgressView.setText(progressText);
-				}
-			});
-		} else {
 			final int progress = playerService.getCurrentPosition(), max = playerService.getCurrentTrackDuration();
-			final boolean enabled = true;
 			final String durationText = Track.formatDuration(playerService.getCurrentTrackDuration()), progressText = Track.formatDuration(playerService.getCurrentPosition());
 			runOnUiThread(new Runnable() {
 
 				@Override
 				public void run() {							
-					trackSeek.setProgress(progress);
-					trackSeek.setMax(max);
-					trackSeek.setEnabled(enabled);
 					currentTrackDurationView.setText(durationText);
 					currentTrackProgressView.setText(progressText);
+					trackSeek.setMax(max);
+					trackSeek.setProgress(progress);
 				}
 			});
-		}
     }
 
     public void refreshTracklist() {
 
     	final ArrayList<Track> currentTracks = playerService.getCurrentTracks();
+    	final int currentTrack = playerService.getCurrentTrack();
 		runOnUiThread(new Runnable() {
 
 			@Override
@@ -243,45 +237,46 @@ public class NowPlayingActivity extends Activity {
 		    		tracklistAdapter.add(t);
 		    	}
 		    	tracklistAdapter.notifyDataSetChanged();
-		    	tracklistView.setSelection(playerService.getCurrentTrack());
+		    	tracklistView.setSelection(currentTrack);
 			}
 		});
     }
     
 	public void refreshButtons() {
-		if (playerService.getStatus() == PlayerService.PLAYING) {
-			runOnUiThread(new Runnable() {
+		runOnUiThread(new Runnable() {
 
-				@Override
-				public void run() {							
+			@Override
+			public void run() {
+				switch (playerStatus) {
+				case PlayerService.PLAYING:
 					playButton.setText(R.string.pause_button);
-				}
-			});
-		} else {
-			runOnUiThread(new Runnable() {
-
-				@Override
-				public void run() {							
+				break;
+				default:
 					playButton.setText(R.string.play_button);
+				break;
 				}
-			});
-		}			
+				
+			}
+		});
 	}
     
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
     	super.onCreateContextMenu(menu, v, menuInfo);
-    	MenuInflater inflater = getMenuInflater();
-    	inflater.inflate(R.layout.track_menu, menu);
+       	MenuInflater inflater = getMenuInflater();
+       	inflater.inflate(R.layout.track_menu, menu);
     }
     
     @Override
     public boolean onContextItemSelected(MenuItem item) {
     	AdapterContextMenuInfo info = (AdapterContextMenuInfo)item.getMenuInfo();
     	switch (item.getItemId()) {
-    	case R.id.track_menu_delete:
+    	case R.id.track_menu_remove:
     		playerService.deleteTrack(info.position);
-    		refreshTracklist();
+    	break;
+    	case R.id.track_menu_info:
+    		
+    	break;
     	}
     	return super.onContextItemSelected(item);
     }
@@ -298,11 +293,14 @@ public class NowPlayingActivity extends Activity {
     	switch (item.getItemId()) {
     	case R.id.menu_clear_tracklist:
     		playerService.clearTracklist();
-    		refreshTracklist();
+    	break;
+    	case R.id.menu_settings:
+    		startActivity(new Intent(getApplicationContext(), SettingsActivity.class));
+    	break;
     	}
     	return super.onOptionsItemSelected(item);
     }
-    
+
     private class UiRefresher implements Runnable {
     	
     	private boolean done = false;
@@ -315,65 +313,26 @@ public class NowPlayingActivity extends Activity {
 		public void run() {
 
 			while (!done) {
-				synchronized (uiUpdaterMonitor) {
-					if (playerService == null) {
-						try {
-							uiUpdaterMonitor.wait();
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
-					synchronized (playerService) {
-						if (playerService.isTaken()) {
-							try {
-								playerService.wait();
-							} catch (InterruptedException e) {
-								e.printStackTrace();
-							}
-						}
-						playerService.take();
-						refreshTrack();
-						refreshTracklist();
-						refreshButtons();
-					}
-				}
-			}
-		}    	
-    }
-    
-    private class TrackRefresher implements Runnable {
-    	
-    	private boolean done = false;
-    	
-    	public void done() {
-    		done = true;
-    	}
-
-		@Override
-		public void run() {
-			synchronized (trackUpdaterMonitor) {
-				while (!done) {
-					if (playerService == null) {
-						try {
-							trackUpdaterMonitor.wait();
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
+				synchronized (playerService) {
+					playerStatus = playerService.getStatus();
 					refreshTrack();
+					refreshTracklist();
+					refreshButtons();				
+					playerService.take();
 					try {
-						Thread.sleep(1000);
+						playerService.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
 				}
 			}
-		}    	
+		}
     }
-    
+ 
     static private class ViewHolder {
-    	TextView trackTitle;
-    	TextView trackDetails;
-    	TableLayout trackTable;
+    	TextView title;
+    	TextView artist;
+    	TextView duration;
+    	ImageView playicon;
     }
 }

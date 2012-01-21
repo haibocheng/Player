@@ -1,35 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
-	android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:stretchColumns="*"
-    android:paddingTop="5dip">
-    
-    <TableRow>
-    
-	    <Button android:text="Player" 
-    		android:id="@+id/player_button"/>
-	    <Button android:text="Parent dir" 
-    		android:id="@+id/parent_dir_button"/>
-    		
-   	</TableRow>
-   	<TableRow>
 
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent">
+    
 		<TextView 
 			android:id="@+id/file_browser_dir" 
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
 			android:background="#666666"
-			android:paddingLeft="5dip"
-			android:layout_span="2"
 			/>
-			
-	</TableRow>
 		
 	    <ListView 
 	    	android:id="@+id/files_listview" 
     		android:layout_width="fill_parent"
     		android:layout_height="fill_parent"
-			android:layout_span="2"
-    		android:layout_weight="1"
+			android:layout_below="@id/file_browser_dir"
+			android:layout_alignParentBottom="true"
     		/>    		
     		
-</TableLayout>
+</RelativeLayout>

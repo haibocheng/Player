@@ -26,22 +26,18 @@ public class Track {
 			album = t.getFirst(FieldKey.ALBUM);
 			year = t.getFirst(FieldKey.YEAR);
 			title = t.getFirst(FieldKey.TITLE);
+			duration = af.getAudioHeader().getTrackLength()*1000;
 		} catch (CannotReadException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (TagException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (ReadOnlyFileException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (InvalidAudioFrameException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}		
+		}
 	}
 	
 	public Track(String p) {
@@ -91,6 +87,6 @@ public class Track {
     	String min = Integer.toString((p/1000)/60);
     	String sec = Integer.toString((p/1000)%60);
     	if (sec.length() == 1) sec = "0"+sec;
-    	return min+":"+sec;		
+    	return min+":"+sec;
 	}
 }

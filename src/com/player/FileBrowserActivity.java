@@ -43,19 +43,16 @@ import com.player.PlayerService.PlayerBinder;
 
 public class FileBrowserActivity extends Activity {
 
-	private Button playerButton, parentDirButton;
-	private ListView fileListView;
-	
+	private ListView fileListView;	
 	private MusicFile currentDir;
-	private ArrayList<MusicFile> currentFiles = new ArrayList<MusicFile>();
-	private Stack<MusicFile> prevDirs = new Stack<MusicFile>();
-	
+	private ArrayList<MusicFile> currentFiles;
+	private ArrayAdapter<MusicFile> fileListAdapter;
+	private Stack<MusicFile> prevDirs;
+	private boolean parentAllowed;
 	private HashMap<Integer, Bitmap> albumCovers;
-	private HashMap<Integer, String> trackTitles;
-	
+	private HashMap<Integer, String> trackTitles;	
 	private PlayerServiceConnection playerServiceConnection = new PlayerServiceConnection();
-	private PlayerService playerService = null;
-	
+	private PlayerService playerService = null;	
 	private Object mutex = new Object();
 
 	@Override
@@ -64,122 +61,37 @@ public class FileBrowserActivity extends Activity {
         setContentView(R.layout.file_browser);
         SharedPreferences settings = getSharedPreferences("settings", 0);
         currentDir = new MusicFile(settings.getString("last_dir", Environment.getExternalStorageDirectory().getAbsolutePath()));
-        prevDirs.clear();
-        
+        currentFiles = new ArrayList<MusicFile>();
+        prevDirs = new Stack<MusicFile>();
         albumCovers = new HashMap<Integer, Bitmap>();
         trackTitles = new HashMap<Integer, String>();
+        prevDirs.clear();
         
-        playerButton = (Button)findViewById(R.id.player_button);
-        parentDirButton = (Button)findViewById(R.id.parent_dir_button);
         fileListView = (ListView)findViewById(R.id.files_listview);              
-        
-        playerButton.setOnClickListener(new OnClickListener() {
-			
-			@Override
-			public void onClick(View arg0) {
-				finish();
-			}
-		});
-        parentDirButton.setOnClickListener(new OnClickListener() {
-			
-			@Override
-			public void onClick(View arg0) {
-				if (prevDirs.size() > 0 && prevDirs.lastElement().compareTo(currentDir.getParentFile()) == 0) {
-					prevDirs.pop();
-				} else {
-					prevDirs.push(currentDir);
-				}
-				browse(new MusicFile(currentDir.getParent()));
-			}
-		});
     	fileListView.setOnItemClickListener(new OnItemClickListener() {
 			
 			@Override
 			public void onItemClick(AdapterView<?> arg0, View arg1, int pos, long arg3) {
-				MusicFile selected_file = currentFiles.get(pos);
-				if (selected_file.isFile()) {
-					playerService.addTrack(selected_file);					
+				MusicFile selectedFile;
+				if (pos == 0) {
+					if (parentAllowed) {
+						selectedFile = new MusicFile(currentDir.getParent());
+					} else {
+						return;
+					}
+				} else {
+					selectedFile = currentFiles.get(pos-1);
+				}
+				if (selectedFile.isFile()) {
+					playerService.addTrack(selectedFile);					
 				} else {
 					currentDir.setListPos(pos);
 			    	prevDirs.push(currentDir);
-					browse(selected_file);
+					browse(selectedFile);
 				}
-			}
-		});
-    	
-    	browse(currentDir);
-    }
-    
-    @Override
-    protected void onStart() {
-    	super.onStart();
-		Intent playerServiceIntent = new Intent(this, PlayerService.class);
-		getApplicationContext().bindService(playerServiceIntent, playerServiceConnection, 0);
-    }
-    
-    @Override
-    protected void onStop() {
-    	super.onStop();
-    	getApplicationContext().unbindService(playerServiceConnection);
-    	
-        SharedPreferences settings = getSharedPreferences("settings", 0);
-        SharedPreferences.Editor editor = settings.edit();
-        editor.putString("last_dir", currentDir.getAbsolutePath());
-        editor.commit();
-    }
-    
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-    	if ((keyCode == KeyEvent.KEYCODE_BACK) && prevDirs.size() > 0) {
-    		browse(prevDirs.pop());
-    		return true;
-   		}
-    	return super.onKeyDown(keyCode, event);
-    }
-    
-    private void browse(MusicFile dir) {    	
-    	if (dir.compareTo(new MusicFile(Environment.getExternalStorageDirectory().getAbsolutePath())) == 0) {
-    		parentDirButton.setEnabled(false);
-    	} else {
-    		parentDirButton.setEnabled(true);
-    	}
-    	currentFiles.clear();
-    	currentDir = dir;
-    	File[] fileList = dir.listFiles(new FileFilter() {
-			
-			@Override
-			public boolean accept(File file) {
-				if ((file.getName().toLowerCase().endsWith("mp3") || file.isDirectory()) && (file.getName()).charAt(0) != '.') {
-					return true;
-				}
-				return false;
 			}
 		});    	
-    	Arrays.sort(fileList, new Comparator<Object>() {
-
-			@Override
-			public int compare(Object file1, Object file2) {
-				return new String(((File)file1).getName()).compareTo(((File)file2).getName());
-			}
-		});	
-    	Arrays.sort(fileList, new Comparator<Object>() {
-
-			@Override
-			public int compare(Object file1, Object file2) {
-				if (((File)file1).isDirectory() && ((File)file2).isFile()) {
-					return -1;
-				}
-				if (!((File)file1).isDirectory() && ((File)file2).isDirectory()) {
-					return 1;
-				}
-				return 0;
-			}
-		});	
-    	for (File file : fileList) {
-    		currentFiles.add(new MusicFile(file.getAbsolutePath()));
-    	}
-    	
-    	ArrayAdapter<MusicFile> fileListAdapter = new ArrayAdapter<MusicFile>(this, R.layout.file_browser_item, R.id.file_browser_file_name) {
+    	fileListAdapter = new ArrayAdapter<MusicFile>(this, R.layout.file_browser_item, 0) {
     		
     		@Override
             public View getView(final int pos, View convertView, android.view.ViewGroup parent) {
@@ -278,14 +190,87 @@ public class FileBrowserActivity extends Activity {
                 return v;
             };    		
     	};
+    	fileListView.setAdapter(fileListAdapter);
+    	browse(currentDir);
+    }
+    
+    @Override
+    protected void onStart() {
+    	super.onStart();
+		Intent playerServiceIntent = new Intent(this, PlayerService.class);
+		getApplicationContext().bindService(playerServiceIntent, playerServiceConnection, 0);
+    }
+    
+    @Override
+    protected void onStop() {
+    	super.onStop();
+    	getApplicationContext().unbindService(playerServiceConnection);
+    	
+        SharedPreferences settings = getSharedPreferences("settings", 0);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putString("last_dir", currentDir.getAbsolutePath());
+        editor.commit();
+    }
+    
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+    	if ((keyCode == KeyEvent.KEYCODE_BACK) && prevDirs.size() > 0) {
+    		browse(prevDirs.pop());
+    		return true;
+   		}
+    	return super.onKeyDown(keyCode, event);
+    }
+    
+    private void browse(MusicFile dir) {    	
+    	if (dir.compareTo(new MusicFile(Environment.getExternalStorageDirectory().getAbsolutePath())) == 0) {
+    		parentAllowed = false;
+    	} else {
+    		parentAllowed = true;
+    	}
+    	currentFiles.clear();
+    	currentDir = dir;
+    	File[] fileList = dir.listFiles(new FileFilter() {
+			
+			@Override
+			public boolean accept(File file) {
+				if ((file.getName().toLowerCase().endsWith("mp3") || file.isDirectory()) && (file.getName()).charAt(0) != '.') {
+					return true;
+				}
+				return false;
+			}
+		});    	
+    	Arrays.sort(fileList, new Comparator<Object>() {
 
+			@Override
+			public int compare(Object file1, Object file2) {
+				return new String(((File)file1).getName()).compareTo(((File)file2).getName());
+			}
+		});	
+    	Arrays.sort(fileList, new Comparator<Object>() {
+
+			@Override
+			public int compare(Object file1, Object file2) {
+				if (((File)file1).isDirectory() && ((File)file2).isFile()) {
+					return -1;
+				}
+				if (!((File)file1).isDirectory() && ((File)file2).isDirectory()) {
+					return 1;
+				}
+				return 0;
+			}
+		});	
+    	for (File file : fileList) {
+    		currentFiles.add(new MusicFile(file.getAbsolutePath()));
+    	}    	
+
+    	fileListAdapter.clear();
+    	fileListAdapter.add(new MusicFile(".."));
     	for (MusicFile f : currentFiles) fileListAdapter.add(f);
     	
-    	((TextView)findViewById(R.id.file_browser_dir)).setText(currentDir.getAbsolutePath());
-    	
+    	((TextView)findViewById(R.id.file_browser_dir)).setText(currentDir.getAbsolutePath());    	
     	albumCovers.clear();
     	trackTitles.clear();
-    	fileListView.setAdapter(fileListAdapter);
+    	fileListAdapter.notifyDataSetChanged();
     	if (currentDir.getListPos() != -1) {
     		fileListView.setSelection(currentDir.getListPos());
 		}
