@@ -19,4 +19,7 @@
 
     <string name="track_menu_remove">Remove</string>
     <string name="track_menu_info">Info</string>
+    
+    <string name="settings_show_hidden_files">Show hidden files</string>
+    <string name="settings_show_hidden_files_summary">Show hidden files in file browser</string>
 </resources>

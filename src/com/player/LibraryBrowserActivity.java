@@ -3,11 +3,17 @@ package com.player;
 import android.app.Activity;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.provider.MediaStore;
+import android.provider.MediaStore.Audio;
+import android.provider.MediaStore.Audio.AlbumColumns;
+import android.provider.MediaStore.Audio.Albums;
+import android.provider.MediaStore.Audio.ArtistColumns;
+import android.provider.MediaStore.Audio.Artists;
+import android.provider.MediaStore.Audio.AudioColumns;
+import android.provider.MediaStore.Audio.Media;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewStub.OnInflateListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
@@ -20,8 +26,11 @@ public class LibraryBrowserActivity extends Activity {
 	final static public int ARTISTS = 0, ALBUMS = 1, TRACKS = 2;
 	private int currentLevel;
 	private ListView libraryListView;
+	private int currentArtist;
+	private int currentAlbum;
 	private ArrayAdapter<Artist> artistAdapter;
 	private ArrayAdapter<Album> albumAdapter;
+	private ArrayAdapter<Track> trackAdapter;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -35,18 +44,21 @@ public class LibraryBrowserActivity extends Activity {
 			public void onItemClick(AdapterView<?> arg0, View arg1, int pos, long arg3) {
 				switch (currentLevel) {				
 				case ARTISTS:
-					//Toast.makeText(getApplicationContext(), artistAdapter.getItem(pos).getName(), 500).show();
-					showAlbums(artistAdapter.getItem(pos).getId());
+					currentArtist = artistAdapter.getItem(pos).getId(); 
+					currentLevel = ALBUMS;
+					show();
 				break;
 				case ALBUMS:
-					showTracks();
+					currentAlbum = albumAdapter.getItem(pos).getId(); 
+					currentLevel = TRACKS;
+					show();
 				break;
 				case TRACKS:
 				break;
 				}
 			}
 		});
-		artistAdapter = new ArrayAdapter<Artist>(this, R.layout.library_item, 0) {
+		artistAdapter = new ArrayAdapter<Artist>(this, R.layout.library_artist_item, 0) {
 			
 			@Override
 			public View getView(int pos, View convertView, ViewGroup parent) {
@@ -54,9 +66,9 @@ public class LibraryBrowserActivity extends Activity {
     			ArtistViewHolder holder = null;    			
     			if (v == null) {
     				LayoutInflater inflater = (LayoutInflater)getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
-    				v = inflater.inflate(R.layout.library_item, null);
+    				v = inflater.inflate(R.layout.library_artist_item, null);
     				holder = new ArtistViewHolder();
-    				holder.name = (TextView)v.findViewById(R.id.library_item_name);
+    				holder.name = (TextView)v.findViewById(R.id.library_artist_name);
     				v.setTag(holder);
     			} else {
     				holder = (ArtistViewHolder)v.getTag();
@@ -65,52 +77,97 @@ public class LibraryBrowserActivity extends Activity {
     			return v;
 			}
 		};
-		albumAdapter = new ArrayAdapter<Album>(this, R.layout.library_item, 0) {
+		albumAdapter = new ArrayAdapter<Album>(this, R.layout.library_album_item, 0) {
 			
 			@Override
 			public View getView(int pos, View convertView, ViewGroup parent) {
     			View v = convertView;
-    			ArtistViewHolder holder = null;    			
+    			AlbumViewHolder holder = null;    			
     			if (v == null) {
     				LayoutInflater inflater = (LayoutInflater)getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
-    				v = inflater.inflate(R.layout.library_item, null);
-    				holder = new ArtistViewHolder();
-    				holder.name = (TextView)v.findViewById(R.id.library_item_name);
+    				v = inflater.inflate(R.layout.library_album_item, null);
+    				holder = new AlbumViewHolder();
+    				holder.year = (TextView)v.findViewById(R.id.library_album_year);
+    				holder.name = (TextView)v.findViewById(R.id.library_album_name);
     				v.setTag(holder);
     			} else {
-    				holder = (ArtistViewHolder)v.getTag();
+    				holder = (AlbumViewHolder)v.getTag();
     			}    			
+    			holder.year.setText(getItem(pos).getYear());
     			holder.name.setText(getItem(pos).getName());
     			return v;
 			}
 		};
-		showArtists();
+		trackAdapter = new ArrayAdapter<Track>(this, R.layout.library_track_item, 0) {
+			
+			@Override
+			public View getView(int pos, View convertView, ViewGroup parent) {
+    			View v = convertView;
+    			TrackViewHolder holder = null;    			
+    			if (v == null) {
+    				LayoutInflater inflater = (LayoutInflater)getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
+    				v = inflater.inflate(R.layout.library_track_item, null);
+    				holder = new TrackViewHolder();
+    				holder.name = (TextView)v.findViewById(R.id.library_track_name);
+    				v.setTag(holder);
+    			} else {
+    				holder = (TrackViewHolder)v.getTag();
+    			}    			
+    			holder.name.setText(getItem(pos).getNumber()+". "+getItem(pos).getName());
+    			return v;
+			}
+		};
+		show();
+	}
+	
+	private void show() {
+		switch (currentLevel) {				
+		case ARTISTS:
+			showArtists();
+		break;
+		case ALBUMS:
+			showAlbums();
+		break;
+		case TRACKS:
+			showTracks();
+		break;
+		}
 	}
 	
 	private void showArtists() {
-		currentLevel = ARTISTS;
-		String[] proj = {MediaStore.Audio.Media._ID, MediaStore.Audio.Media.ARTIST};
-		Cursor artistCursor = managedQuery(MediaStore.Audio.Artists.EXTERNAL_CONTENT_URI, proj, null, null, MediaStore.Audio.Media.ARTIST);		
+		String[] proj = {Audio.Media._ID, Audio.Media.ARTIST};
+		Cursor artistCursor = managedQuery(Artists.EXTERNAL_CONTENT_URI, proj, null, null, Audio.Media.ARTIST);		
 		artistAdapter.clear();		
+//		String[] columns = artistCursor.getColumnNames();
+//		for (String c : columns) Toast.makeText(getApplicationContext(), c, 1000).show();
 		while (artistCursor.moveToNext()) {
 			artistAdapter.add(new Artist(Integer.parseInt(artistCursor.getString(0)), artistCursor.getString(1)));
 		}
 		libraryListView.setAdapter(artistAdapter);
 	}
 	
-	private void showAlbums(int id) {
-		currentLevel = ALBUMS;
-		String[] proj = {MediaStore.Audio.Media._ID, MediaStore.Audio.Media.ALBUM};
-		Cursor albumCursor = managedQuery(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI, proj, null, null, MediaStore.Audio.Media.ALBUM);
+	private void showAlbums() {
+		String[] proj = {Audio.Media._ID, AlbumColumns.FIRST_YEAR, Audio.Media.ALBUM};
+		Cursor albumCursor = managedQuery(Albums.EXTERNAL_CONTENT_URI, proj, Audio.Media.ARTIST_ID+" == "+currentArtist+" ", null, AlbumColumns.LAST_YEAR);
 		albumAdapter.clear();
+//		String[] columns = albumCursor.getColumnNames();
+//		for (String c : columns) Toast.makeText(getApplicationContext(), c, 1000).show();
 		while (albumCursor.moveToNext()) {
-			albumAdapter.add(new Album(Integer.parseInt(albumCursor.getString(0)), albumCursor.getString(1)));
+			albumAdapter.add(new Album(Integer.parseInt(albumCursor.getString(0)), albumCursor.getString(1), albumCursor.getString(2)));
 		}
 		libraryListView.setAdapter(albumAdapter);
 	}
 	
 	private void showTracks() {
-		
+		String[] proj = {Audio.Media._ID, Audio.Media.TITLE, Audio.Media.TRACK};
+		Cursor trackCursor = managedQuery(Audio.Media.EXTERNAL_CONTENT_URI, null, AudioColumns.ALBUM_ID+" == "+currentAlbum+" ", null, AudioColumns.TRACK);
+		trackAdapter.clear();
+//		String[] columns = albumCursor.getColumnNames();
+//		for (String c : columns) Toast.makeText(getApplicationContext(), c, 1000).show();
+		while (trackCursor.moveToNext()) {
+			trackAdapter.add(new Track(Integer.parseInt(trackCursor.getString(0)), trackCursor.getString(1), Integer.parseInt(trackCursor.getString(2))));
+		}
+		libraryListView.setAdapter(trackAdapter);
 	}
 	
 	@Override
@@ -128,11 +185,30 @@ public class LibraryBrowserActivity extends Activity {
     protected void onPause() {
     	super.onPause();
     }
+  
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+    	if ((keyCode == KeyEvent.KEYCODE_BACK) && currentLevel > 0) {
+    		currentLevel--;
+    		show();
+    		return true;
+   		}
+    	return super.onKeyDown(keyCode, event);
+    }
     
     static private class ArtistViewHolder {
     	TextView name;
     }
+
+    static private class AlbumViewHolder {
+    	TextView year;
+    	TextView name;
+    }
     
+    static private class TrackViewHolder {
+    	TextView name;
+    }
+
     private class Artist {
     	private int id;
     	private String name;
@@ -153,11 +229,37 @@ public class LibraryBrowserActivity extends Activity {
 
     private class Album {
     	private int id;
+    	private String year;
     	private String name;
     	
-    	public Album(int i, String n) {
+    	public Album(int i, String y, String n) {
     		id = i;
+    		year = y;
     		name = n;
+    	}
+    	
+    	public int getId() {
+    		return id;
+    	}
+    	
+    	public String getYear() {
+    		return year;
+    	}
+    	
+    	public String getName() {
+    		return name;
+    	}
+    }
+
+    private class Track {
+    	private int id;
+    	private String name;
+    	private int number;
+    	
+    	public Track(int id, String name, int number) {
+    		this.id = id;
+    		this.name = name;
+    		this.number = number;
     	}
     	
     	public int getId() {
@@ -166,6 +268,10 @@ public class LibraryBrowserActivity extends Activity {
     	
     	public String getName() {
     		return name;
+    	}
+    	
+    	public int getNumber() {
+    		return number;
     	}
     }
 }
