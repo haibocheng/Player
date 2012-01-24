@@ -9,14 +9,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Stack;
 
-import org.jaudiotagger.audio.AudioFile;
-import org.jaudiotagger.audio.AudioFileIO;
-import org.jaudiotagger.audio.exceptions.CannotReadException;
-import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
-import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
-import org.jaudiotagger.tag.FieldKey;
-import org.jaudiotagger.tag.TagException;
-
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -30,11 +22,9 @@ import android.os.IBinder;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -83,7 +73,7 @@ public class FileBrowserActivity extends Activity {
 					selectedFile = currentFiles.get(pos-1);
 				}
 				if (selectedFile.isFile()) {
-					playerService.addTrack(selectedFile);					
+					playerService.addTrack(playerService.new Track(selectedFile.getPath()));					
 				} else {
 					currentDir.setListPos(pos);
 			    	prevDirs.push(currentDir);
@@ -118,74 +108,74 @@ public class FileBrowserActivity extends Activity {
                 }
             	holder.fileName.setText(item.getName());
     			
-                new Thread(new Runnable() {
-					
-            		@Override
-            		public void run() {
-            			synchronized (mutex) {
-                			if (!item.isFile()) {
-                				if (!albumCovers.containsKey(pos)) {
-                					File[] content = item.listFiles(new FileFilter() {
-                					
-                						@Override
-                						public boolean accept(File file) {
-                							if (file.getName().toLowerCase().endsWith(".jpg")) {
-                								return true;
-                							}
-                							return false;
-                						}
-                					});			    			
-                					if (content.length > 0) {
-                    				
-                						BitmapScaler scaler = null;
-                						try {
-                							scaler = new BitmapScaler(content[0], 80);
-                						} catch (IOException e) {
-                							e.printStackTrace();
-                						}
-                						BitmapScaler s = scaler;
-                						albumCovers.put(pos, s.getScaled());																
-                					}
-                    			}
-                            	runOnUiThread(new Runnable() {
-                            		@Override
-                    		        public void run() {
-                            			if (albumCovers.containsKey(pos)) {
-                            				holder.fileIcon.setImageBitmap(albumCovers.get(pos));
-                            			} else {
-                            				holder.fileIcon.setImageResource(R.drawable.dir);
-                            			}
-                    		        }
-                               	});										    			
-                			} else {
-                				if (!trackTitles.containsKey(pos)) {
-                					AudioFile afile = null;	
-                					try {
-                						afile = AudioFileIO.read(item);
-                						trackTitles.put(pos, afile.getTag().getFirst(FieldKey.TITLE));			            		
-                					} catch (CannotReadException e) {
-                						e.printStackTrace();
-                					} catch (IOException e) {
-                						e.printStackTrace();
-                					} catch (TagException e) {
-                						e.printStackTrace();
-                					} catch (ReadOnlyFileException e) {
-                						e.printStackTrace();
-                					} catch (InvalidAudioFrameException e) {
-                						e.printStackTrace();
-                					}
-                				}
-                            	runOnUiThread(new Runnable() {
-                            		@Override
-                            		public void run() {
-                            			holder.fileName.setText(trackTitles.get(pos));
-                            		}
-                				});
-                			}
-                			mutex.notify();
-            			}
-            		}
-				}).start();
+//                new Thread(new Runnable() {
+//					
+//            		@Override
+//            		public void run() {
+//            			synchronized (mutex) {
+//                			if (!item.isFile()) {
+//                				if (!albumCovers.containsKey(pos)) {
+//                					File[] content = item.listFiles(new FileFilter() {
+//                					
+//                						@Override
+//                						public boolean accept(File file) {
+//                							if (file.getName().toLowerCase().endsWith(".jpg")) {
+//                								return true;
+//                							}
+//                							return false;
+//                						}
+//                					});			    			
+//                					if (content.length > 0) {
+//                    				
+//                						BitmapScaler scaler = null;
+//                						try {
+//                							scaler = new BitmapScaler(content[0], 80);
+//                						} catch (IOException e) {
+//                							e.printStackTrace();
+//                						}
+//                						BitmapScaler s = scaler;
+//                						albumCovers.put(pos, s.getScaled());																
+//                					}
+//                    			}
+//                            	runOnUiThread(new Runnable() {
+//                            		@Override
+//                    		        public void run() {
+//                            			if (albumCovers.containsKey(pos)) {
+//                            				holder.fileIcon.setImageBitmap(albumCovers.get(pos));
+//                            			} else {
+//                            				holder.fileIcon.setImageResource(R.drawable.dir);
+//                            			}
+//                    		        }
+//                               	});										    			
+//                			} else {
+//                				if (!trackTitles.containsKey(pos)) {
+////                					AudioFile afile = null;	
+////                					try {
+////                						afile = AudioFileIO.read(item);
+////                						trackTitles.put(pos, afile.getTag().getFirst(FieldKey.TITLE));			            		
+////                					} catch (CannotReadException e) {
+////                						e.printStackTrace();
+////                					} catch (IOException e) {
+////                						e.printStackTrace();
+////                					} catch (TagException e) {
+////                						e.printStackTrace();
+////                					} catch (ReadOnlyFileException e) {
+////                						e.printStackTrace();
+////                					} catch (InvalidAudioFrameException e) {
+////                						e.printStackTrace();
+////                					}
+//                				}
+//                            	runOnUiThread(new Runnable() {
+//                            		@Override
+//                            		public void run() {
+//                            			holder.fileName.setText(trackTitles.get(pos));
+//                            		}
+//                				});
+//                			}
+//                			mutex.notify();
+//            			}
+//            		}
+//				}).start();
                 
                 return v;
             };    		

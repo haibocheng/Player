@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import android.app.Service;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
@@ -15,11 +16,13 @@ import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.os.Binder;
 import android.os.IBinder;
+import android.provider.MediaStore;
+import android.provider.MediaStore.Audio;
+import android.widget.Toast;
 
 public class PlayerService extends Service {
 	
-	static public final int STOPED = 0, PLAYING = 1, PAUSED = 2;
-	
+	static public final int STOPED = 0, PLAYING = 1, PAUSED = 2;	
 	private MediaPlayer mediaPlayer;
 	private ArrayList<Track> currentTracks;
 	private int currentTrackPosition;
@@ -37,14 +40,6 @@ public class PlayerService extends Service {
 		status = STOPED;
 		playerBinder = new PlayerBinder();
 		
-		DbOpenHelper dbOpenHelper = new DbOpenHelper(getApplicationContext());
-		SQLiteDatabase db = dbOpenHelper.getReadableDatabase();
-		Cursor c = db.query(DbOpenHelper.TABLE_NAME, null, null, null, null, null, null);		
-		while (c.moveToNext()) {
-			currentTracks.add(new Track(new File(c.getString(1))));
-		}
-		dbOpenHelper.close();
-		
 		mediaPlayer.setOnCompletionListener(new OnCompletionListener() {
 			
 			@Override
@@ -55,7 +50,9 @@ public class PlayerService extends Service {
 					nextTrack();
 				}
 			}
-		});		
+		});
+		
+//		restoreTracklist();
 	}
 
 	@Override
@@ -99,8 +96,13 @@ public class PlayerService extends Service {
 		return currentTrackPosition;
 	}
 	
-	public void addTrack(File track) {
-		currentTracks.add(new Track(track));
+	public void addTrack(Track track) {
+		currentTracks.add(track);
+		untake();
+	}
+	
+	public void addTrack(int id) {
+		currentTracks.add(new Track(id));
 		untake();
 	}
 	
@@ -124,7 +126,7 @@ public class PlayerService extends Service {
 		mediaPlayer.reset();
 		FileInputStream file = null;
 		try {
-			file = new FileInputStream(currentTracks.get(pos).getFile());
+			file = new FileInputStream(new File(currentTracks.get(pos).getPath()));
 			mediaPlayer.setDataSource(file.getFD());
 			mediaPlayer.prepare();
 		} catch (FileNotFoundException e) {
@@ -220,20 +222,29 @@ public class PlayerService extends Service {
 	
 	public boolean isTaken() {
 		return taken;
-	}
+	}	
 	
 	public void storeTracklist() {
 		DbOpenHelper dbOpenHelper = new DbOpenHelper(getApplicationContext());
 		SQLiteDatabase db = dbOpenHelper.getWritableDatabase();
 		dbOpenHelper.onUpgrade(db, 1, 1);
-
 		int i = 0;
 		for (Track track : currentTracks) {
 			ContentValues c = new ContentValues();
 			c.put(DbOpenHelper.KEY_POSITION, i);
-			c.put(DbOpenHelper.KEY_FILE, track.getFile().getAbsolutePath());
+			c.put(DbOpenHelper.KEY_FILE, track.getPath());
 			db.insert(DbOpenHelper.TABLE_NAME, null, c);
 			i++;
+		}
+		dbOpenHelper.close();
+	}
+	
+	private void restoreTracklist() {
+		DbOpenHelper dbOpenHelper = new DbOpenHelper(getApplicationContext());
+		SQLiteDatabase db = dbOpenHelper.getReadableDatabase();
+		Cursor c = db.query(DbOpenHelper.TABLE_NAME, null, null, null, null, null, null);		
+		while (c.moveToNext()) {
+			currentTracks.add(new Track(c.getString(1)));
 		}
 		dbOpenHelper.close();
 	}
@@ -244,4 +255,65 @@ public class PlayerService extends Service {
 			return PlayerService.this;
 		}
 	}	
+
+	public class Track {
+
+		private String path, artist, album, year, title, genre;
+		private int id, duration = 0;		
+		
+		public Track(String p) {
+			path = p;
+		}
+		
+		public Track(int id) {
+			String[] proj = {Audio.Media.ARTIST, Audio.Media.ALBUM, Audio.Media.YEAR, Audio.Media.TITLE, Audio.Media.DURATION, Audio.Media.DATA};
+			Cursor trackCursor = getContentResolver().query(Audio.Media.EXTERNAL_CONTENT_URI, proj, "_ID = "+id+" ", null, null);
+			trackCursor.moveToNext();
+			artist = trackCursor.getString(0);
+			album = trackCursor.getString(1);
+			year = trackCursor.getString(2);
+			title = trackCursor.getString(3);
+			duration = Integer.parseInt(trackCursor.getString(4));
+			path = trackCursor.getString(5);
+		}
+		
+		public String getPath() {
+			return path;
+		}
+		
+		public String getArtist() {
+			return artist;
+		}
+		
+		public String getAlbum() {
+			return album;
+		}
+		
+		public String getYear() {
+			return year;
+		}
+		
+		public String getTitle() {
+			return title;
+		}
+		
+		public String getGenre() {
+			return genre;
+		}
+		
+		public int getId() {
+			return id;
+		}
+
+		public int getDuration() {
+			return duration;
+		}
+	}
+	
+	public static String formatDuration(int d) {
+    	String min = Integer.toString((d/1000)/60);
+    	String sec = Integer.toString((d/1000)%60);
+    	if (sec.length() == 1) sec = "0"+sec;
+    	return min+":"+sec;
+	}
 }

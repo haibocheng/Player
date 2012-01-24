@@ -33,6 +33,7 @@ import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 
 import com.player.PlayerService.PlayerBinder;
+import com.player.PlayerService.Track;
 
 public class NowPlayingActivity extends Activity {
 
@@ -41,19 +42,31 @@ public class NowPlayingActivity extends Activity {
 	private ListView tracklistView;
 	private TextView currentTrackProgressView, currentTrackDurationView;
 	private AlertDialog alertDialog;
-	private ArrayAdapter<Track> tracklistAdapter;	
-	private PlayerServiceConnection playerServiceConnection;
-	private PlayerService playerService;
+	private ArrayAdapter<Track> tracklistAdapter;		
     private UiRefresher uiRefresher;
     private Timer progressRefresher;
-    private int playerStatus;
-    
-    @Override
+    private int playerStatus;    
+	private PlayerService playerService;
+    private ServiceConnection playerServiceConnection = new ServiceConnection() {
+		
+		@Override
+		public void onServiceConnected(ComponentName arg0, IBinder service) {
+			PlayerBinder playerBinder = (PlayerBinder)service;
+			playerService = playerBinder.getService();
+			uiRefresher = new UiRefresher();
+	        (new Thread(uiRefresher)).start();
+		}
+		
+		@Override
+		public void onServiceDisconnected(ComponentName arg0) {
+		}
+	};
+
+	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.now_playing);
 
-        playerServiceConnection = new PlayerServiceConnection();
         progressRefresher = new Timer();
 
         tracklistView = (ListView)findViewById(R.id.tracklist);
@@ -109,7 +122,7 @@ public class NowPlayingActivity extends Activity {
 					
 					@Override
 					public void run() {
-						currentTrackProgressView.setText(Track.formatDuration(pos));
+						currentTrackProgressView.setText(PlayerService.formatDuration(pos));
 					}
 				});
 				if (user) {
@@ -156,7 +169,7 @@ public class NowPlayingActivity extends Activity {
     			String title = track.getTitle(), artist = track.getArtist();
     			holder.title.setText(title);
     			holder.artist.setText(artist);
-    			holder.duration.setText(Track.formatDuration(track.getDuration()));
+    			holder.duration.setText(PlayerService.formatDuration(track.getDuration()));
     			if (pos == playerService.getCurrentTrackPosition()) {
     				holder.playicon.setImageResource(R.drawable.playicon);
     			} else {
@@ -199,26 +212,11 @@ public class NowPlayingActivity extends Activity {
     	}
     	getApplicationContext().unbindService(playerServiceConnection);
     }
-    
-    public class PlayerServiceConnection implements ServiceConnection {
-		
-		@Override
-		public void onServiceConnected(ComponentName arg0, IBinder service) {
-			PlayerBinder playerBinder = (PlayerBinder)service;
-			playerService = playerBinder.getService();
-			uiRefresher = new UiRefresher();
-	        (new Thread(uiRefresher)).start();
-		}
-		
-		@Override
-		public void onServiceDisconnected(ComponentName arg0) {
-		}
-	};
 	
     public void refreshTrack() {
     	
 			final int progress = playerService.getCurrentPosition(), max = playerService.getCurrentTrackDuration();
-			final String durationText = Track.formatDuration(playerService.getCurrentTrackDuration()), progressText = Track.formatDuration(playerService.getCurrentPosition());
+			final String durationText = PlayerService.formatDuration(playerService.getCurrentTrackDuration()), progressText = PlayerService.formatDuration(playerService.getCurrentPosition());
 			runOnUiThread(new Runnable() {
 
 				@Override
