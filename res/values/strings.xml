@@ -14,7 +14,7 @@
     <string name="prev_track_button">←</string>
     <string name="next_track_button">→</string>
     
-    <string name="library_album_year_lable">Year:</string>
+    <string name="library_year_label">Year:\u00A0</string>
     <string name="library_artists_title">Artists</string>
     
     <string name="menu_clear_tracklist">Clear</string>

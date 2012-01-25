@@ -12,6 +12,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
+		android:singleLine="true"
+		android:ellipsize="marquee"
         />
 
     <TextView android:id="@+id/tracklist_item_artist"
@@ -20,6 +22,8 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/tracklist_item_title"
         android:layout_alignParentLeft="true"
+		android:singleLine="true"
+		android:ellipsize="marquee"
         />
         
     <TextView android:id="@+id/tracklist_item_duration"

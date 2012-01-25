@@ -50,9 +50,8 @@ public class PlayerService extends Service {
 					nextTrack();
 				}
 			}
-		});
-		
-//		restoreTracklist();
+		});		
+		restoreTracklist();
 	}
 
 	@Override
@@ -114,7 +113,9 @@ public class PlayerService extends Service {
 	}
 	
 	public void clearTracklist() {
-		if (currentTrackPosition >= 0) currentTrackPosition = -2;
+		if (currentTrackPosition >= 0) {
+			stop();
+		}
 		currentTracks.clear();
 		untake();
 	}
@@ -229,7 +230,8 @@ public class PlayerService extends Service {
 		SQLiteDatabase db = dbOpenHelper.getWritableDatabase();
 		dbOpenHelper.onUpgrade(db, 1, 1);
 		int i = 0;
-		for (Track track : currentTracks) {
+		for
+		(Track track : currentTracks) {
 			ContentValues c = new ContentValues();
 			c.put(DbOpenHelper.KEY_POSITION, i);
 			c.put(DbOpenHelper.KEY_FILE, track.getPath());
@@ -263,6 +265,15 @@ public class PlayerService extends Service {
 		
 		public Track(String p) {
 			path = p;
+			String[] proj = {Audio.Media.ARTIST, Audio.Media.ALBUM, Audio.Media.YEAR, Audio.Media.TITLE, Audio.Media.DURATION, Audio.Media._ID};
+			Cursor trackCursor = getContentResolver().query(Audio.Media.EXTERNAL_CONTENT_URI, proj, Audio.Media.DATA+" = '"+path+"' ", null, null);
+			trackCursor.moveToNext();
+			artist = trackCursor.getString(0);
+			album = trackCursor.getString(1);
+			year = trackCursor.getString(2);
+			title = trackCursor.getString(3);
+			duration = Integer.parseInt(trackCursor.getString(4));
+			id = Integer.parseInt(trackCursor.getString(5));
 		}
 		
 		public Track(int id) {

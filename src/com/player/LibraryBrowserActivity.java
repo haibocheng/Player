@@ -9,6 +9,7 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -46,6 +47,8 @@ public class LibraryBrowserActivity extends Activity {
 	private ArrayAdapter<Album> albumAdapter;
 	private ArrayAdapter<Track> trackAdapter;
 	private HashMap<Integer, Bitmap> albumArts;
+	private String artistsTitle;
+	private String yearLabel;
 	private Object mutex;
 	private PlayerService playerService;
     private ServiceConnection playerServiceConnection = new ServiceConnection() {
@@ -69,7 +72,14 @@ public class LibraryBrowserActivity extends Activity {
 		
 		albumArts = new HashMap<Integer, Bitmap>();
 		mutex = new Object();
+		artistsTitle = getResources().getString(R.string.library_artists_title);
+		yearLabel = getResources().getString(R.string.library_year_label);
 		
+        SharedPreferences settings = getSharedPreferences("settings", 0);
+        currentLevel = settings.getInt("currentLevel", 0);
+        currentArtist = settings.getInt("currentArtist", 0);
+        currentAlbum = settings.getInt("currentAlbum", 0);
+        
 		libraryListView = (ListView)findViewById(R.id.library_list);
 		libraryTitle = (TextView)findViewById(R.id.library_title);
 		libraryListView.setOnItemClickListener(new OnItemClickListener() {
@@ -129,7 +139,13 @@ public class LibraryBrowserActivity extends Activity {
     			} else {
     				holder = (AlbumViewHolder)v.getTag();
     			}    			
-    			holder.year.setText(getItem(pos).getYear());
+    			String year = getItem(pos).getYear();
+    			if (year != null) {
+    				holder.year.setVisibility(View.VISIBLE);
+    				holder.year.setText(yearLabel+getItem(pos).getYear());
+    			} else {
+    				holder.year.setVisibility(View.GONE);
+    			}
     			holder.name.setText(getItem(pos).getName());
     			new Thread(new ArtLoader(pos, getItem(pos).getArt(), holder.art)).start();
     			return v;
@@ -166,6 +182,12 @@ public class LibraryBrowserActivity extends Activity {
 	@Override
 	protected void onStop() {
     	getApplicationContext().unbindService(playerServiceConnection);
+        SharedPreferences settings = getSharedPreferences("settings", 0);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putInt("currentLevel", currentLevel);
+        editor.putInt("currentArtist", currentArtist);
+        editor.putInt("currentAlbum", currentAlbum);
+        editor.commit();
 		super.onStop();
 	}
     
@@ -190,30 +212,34 @@ public class LibraryBrowserActivity extends Activity {
     }
 	
 	private void show() {
-		switch (currentLevel) {
-		case ARTISTS:
-			libraryTitle.setText(getResources().getString(R.string.library_artists_title));
-			showArtists();
-		break;
-		case ALBUMS:
+//		libraryTitle.setSelected(true);
+		if (currentLevel > 0) {
 			Cursor artistNameCursor = managedQuery(Artists.EXTERNAL_CONTENT_URI, new String[]{Audio.Media.ARTIST}, Audio.Media._ID+" == "+currentArtist+" ", null, null);
 			if (artistNameCursor.moveToFirst()) {
 				currentArtistName = artistNameCursor.getString(0);
 			}
-			libraryTitle.setText(currentArtistName);
-			albumArts.clear();
+			if (currentLevel > 1) {
+				Cursor albumCursor = managedQuery(Albums.EXTERNAL_CONTENT_URI, new String[]{Audio.Media.ALBUM, Albums.FIRST_YEAR}, Audio.Media._ID+" == "+currentAlbum+" ", null, null);
+				if (albumCursor.moveToFirst()) {
+					currentAlbumName = albumCursor.getString(0);
+					String albumYear = albumCursor.getString(1);
+					if (albumYear != null) {
+						currentAlbumName = albumYear+" - "+currentAlbumName;
+					}
+				}
+			}
+		}
+		switch (currentLevel) {
+		case ARTISTS:
+			libraryTitle.setText(artistsTitle);
+			showArtists();
+		break;
+		case ALBUMS:
+			libraryTitle.setText(artistsTitle+" > "+currentArtistName);
 			showAlbums();
 		break;
 		case TRACKS:
-			Cursor albumCursor = managedQuery(Albums.EXTERNAL_CONTENT_URI, new String[]{Audio.Media.ALBUM, Albums.FIRST_YEAR}, Audio.Media._ID+" == "+currentAlbum+" ", null, null);
-			if (albumCursor.moveToFirst()) {
-				currentAlbumName = albumCursor.getString(0);
-				String albumYear = albumCursor.getString(1);
-				if (albumYear != null) {
-					currentAlbumName = albumYear+" - "+currentAlbumName;
-				}
-			}
-			libraryTitle.setText(currentArtistName+" > "+currentAlbumName);
+			libraryTitle.setText(artistsTitle+" > "+currentArtistName+" > "+currentAlbumName);
 			showTracks();
 		break;
 		}
@@ -234,6 +260,7 @@ public class LibraryBrowserActivity extends Activity {
 	private void showAlbums() {
 		String[] proj = {Audio.Media._ID, AlbumColumns.FIRST_YEAR, Audio.Media.ALBUM, Audio.Media.ALBUM_ART};
 		Cursor albumCursor = managedQuery(Albums.EXTERNAL_CONTENT_URI, proj, Audio.Media.ARTIST_ID+" == "+currentArtist+" ", null, AlbumColumns.LAST_YEAR);
+		albumArts.clear();
 		albumAdapter.clear();
 		while (albumCursor.moveToNext()) {
 			albumAdapter.add(new Album(Integer.parseInt(albumCursor.getString(0)), albumCursor.getString(1), albumCursor.getString(2), albumCursor.getString(3)));

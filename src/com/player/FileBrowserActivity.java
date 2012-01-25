@@ -33,7 +33,8 @@ import com.player.PlayerService.PlayerBinder;
 
 public class FileBrowserActivity extends Activity {
 
-	private ListView fileListView;	
+	private ListView fileListView;
+	private TextView currentDirView;
 	private MusicFile currentDir;
 	private ArrayList<MusicFile> currentFiles;
 	private ArrayAdapter<MusicFile> fileListAdapter;
@@ -57,6 +58,8 @@ public class FileBrowserActivity extends Activity {
         trackTitles = new HashMap<Integer, String>();
         prevDirs.clear();
         
+        currentDirView = (TextView)findViewById(R.id.file_browser_dir);
+        currentDirView.setSelected(true);
         fileListView = (ListView)findViewById(R.id.files_listview);              
     	fileListView.setOnItemClickListener(new OnItemClickListener() {
 			
@@ -104,7 +107,7 @@ public class FileBrowserActivity extends Activity {
                 if (!item.isTrack()) {
                 	holder.fileIcon.setImageResource(R.drawable.dir);
                 } else {
-                	holder.fileIcon.setImageResource(R.drawable.icon);
+                	holder.fileIcon.setImageResource(R.drawable.file);
                 }
             	holder.fileName.setText(item.getName());
     			
@@ -257,7 +260,7 @@ public class FileBrowserActivity extends Activity {
     	fileListAdapter.add(new MusicFile(".."));
     	for (MusicFile f : currentFiles) fileListAdapter.add(f);
     	
-    	((TextView)findViewById(R.id.file_browser_dir)).setText(currentDir.getAbsolutePath());    	
+    	currentDirView.setText(currentDir.getAbsolutePath());
     	albumCovers.clear();
     	trackTitles.clear();
     	fileListAdapter.notifyDataSetChanged();
