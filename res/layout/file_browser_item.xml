@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:paddingLeft="5dip"
+	android:paddingRight="10dip"
+	android:paddingTop="7dip"
+	android:paddingBottom="4dip"
+	>
+	
+	<ImageView
+		android:id="@+id/file_browser_file_icon"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:layout_alignParentLeft="true"
+	    android:paddingRight="10dip"
+	    />
+	        
+	<TextView 
+    	android:id="@+id/file_browser_file_name"
+    	android:layout_width="wrap_content"
+    	android:layout_height="wrap_content"
+    	android:layout_toRightOf="@id/file_browser_file_icon"
+    	android:layout_centerVertical="true"
+    	android:textSize="18dip"
+		android:singleLine="true"
+		android:ellipsize="marquee"
+    	/>
+    	
+</RelativeLayout>
