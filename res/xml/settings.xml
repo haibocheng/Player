@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <CheckBoxPreference android:key="show_hidden_files" android:title="@string/settings_show_hidden_files" android:summary="@string/settings_show_hidden_files_summary"></CheckBoxPreference>
+    
+</PreferenceScreen>

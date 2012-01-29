@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+  	xmlns:android="http://schemas.android.com/apk/res/android"
+  	android:layout_width="match_parent"
+  	android:layout_height="match_parent"
+  	>
+  
+  	<TextView
+  		android:id="@+id/library_title"
+  		android:layout_width="match_parent"
+  		android:layout_height="wrap_content"
+  		android:padding="5dip"
+  		android:background="#333333"
+  		android:layout_alignParentTop="true"
+		android:singleLine="true"
+		android:ellipsize="marquee"
+		android:marqueeRepeatLimit="marquee_forever"
+  		/>
+
+	<ListView
+		android:id="@+id/library_list"
+  		android:layout_width="match_parent"
+  		android:layout_height="match_parent"
+  		android:layout_below="@id/library_title"
+  		android:layout_alignParentBottom="true"		 
+		/>
+    
+</RelativeLayout>
