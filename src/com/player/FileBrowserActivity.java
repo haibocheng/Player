@@ -2,11 +2,9 @@ package com.player;
 
 import java.io.File;
 import java.io.FileFilter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Stack;
 
 import android.app.Activity;
@@ -15,7 +13,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
@@ -35,28 +32,24 @@ public class FileBrowserActivity extends Activity {
 
 	private ListView fileListView;
 	private TextView currentDirView;
-	private MusicFile currentDir;
-	private ArrayList<MusicFile> currentFiles;
-	private ArrayAdapter<MusicFile> fileListAdapter;
-	private Stack<MusicFile> prevDirs;
+	private File currentDir;
+	private ArrayList<File> currentFiles;
+	private ArrayAdapter<File> fileListAdapter;
+	private Stack<Dir> dirHistory;
 	private boolean parentAllowed;
-	private HashMap<Integer, Bitmap> albumCovers;
-	private HashMap<Integer, String> trackTitles;	
 	private PlayerServiceConnection playerServiceConnection = new PlayerServiceConnection();
 	private PlayerService playerService = null;	
-	private Object mutex = new Object();
 
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);        
         setContentView(R.layout.file_browser);
         SharedPreferences settings = getSharedPreferences("settings", 0);
-        currentDir = new MusicFile(settings.getString("last_dir", Environment.getExternalStorageDirectory().getAbsolutePath()));
-        currentFiles = new ArrayList<MusicFile>();
-        prevDirs = new Stack<MusicFile>();
-        albumCovers = new HashMap<Integer, Bitmap>();
-        trackTitles = new HashMap<Integer, String>();
-        prevDirs.clear();
+
+        currentDir = new File(settings.getString("last_dir", Environment.getExternalStorageDirectory().getAbsolutePath()));
+        currentFiles = new ArrayList<File>();
+        dirHistory = new Stack<Dir>();
+        dirHistory.push(new Dir(currentDir.getAbsolutePath(), 0));
         
         currentDirView = (TextView)findViewById(R.id.file_browser_dir);
         currentDirView.setSelected(true);
@@ -65,10 +58,10 @@ public class FileBrowserActivity extends Activity {
 			
 			@Override
 			public void onItemClick(AdapterView<?> arg0, View arg1, int pos, long arg3) {
-				MusicFile selectedFile;
+				File selectedFile;
 				if (pos == 0) {
 					if (parentAllowed) {
-						selectedFile = new MusicFile(currentDir.getParent());
+						selectedFile = currentDir.getParentFile();
 					} else {
 						return;
 					}
@@ -78,19 +71,17 @@ public class FileBrowserActivity extends Activity {
 				if (selectedFile.isFile()) {
 					playerService.addTrack(playerService.new Track(selectedFile.getPath()));					
 				} else {
-					currentDir.setListPos(pos);
-			    	prevDirs.push(currentDir);
+			    	dirHistory.push(new Dir(currentDir.getAbsolutePath(), pos));
 					browse(selectedFile);
 				}
 			}
 		});    	
-    	fileListAdapter = new ArrayAdapter<MusicFile>(this, R.layout.file_browser_item, 0) {
+    	fileListAdapter = new ArrayAdapter<File>(this, R.layout.file_browser_item, 0) {
     		
     		@Override
             public View getView(final int pos, View convertView, android.view.ViewGroup parent) {
     			View v = convertView;
-    			final ViewHolder holder;
-
+    			ViewHolder holder;
     			if (v == null) {
     				LayoutInflater inflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     				v = inflater.inflate(R.layout.file_browser_item, null);
@@ -101,85 +92,14 @@ public class FileBrowserActivity extends Activity {
     			} else {
     				holder = (ViewHolder)v.getTag();
     			}
-
-    			final MusicFile item = getItem(pos);
+    			File item = getItem(pos);
                	holder.fileName.setText(item.getName());
-                if (!item.isTrack()) {
+                if (!item.isFile()) {
                 	holder.fileIcon.setImageResource(R.drawable.dir);
                 } else {
                 	holder.fileIcon.setImageResource(R.drawable.file);
                 }
             	holder.fileName.setText(item.getName());
-    			
-//                new Thread(new Runnable() {
-//					
-//            		@Override
-//            		public void run() {
-//            			synchronized (mutex) {
-//                			if (!item.isFile()) {
-//                				if (!albumCovers.containsKey(pos)) {
-//                					File[] content = item.listFiles(new FileFilter() {
-//                					
-//                						@Override
-//                						public boolean accept(File file) {
-//                							if (file.getName().toLowerCase().endsWith(".jpg")) {
-//                								return true;
-//                							}
-//                							return false;
-//                						}
-//                					});			    			
-//                					if (content.length > 0) {
-//                    				
-//                						BitmapScaler scaler = null;
-//                						try {
-//                							scaler = new BitmapScaler(content[0], 80);
-//                						} catch (IOException e) {
-//                							e.printStackTrace();
-//                						}
-//                						BitmapScaler s = scaler;
-//                						albumCovers.put(pos, s.getScaled());																
-//                					}
-//                    			}
-//                            	runOnUiThread(new Runnable() {
-//                            		@Override
-//                    		        public void run() {
-//                            			if (albumCovers.containsKey(pos)) {
-//                            				holder.fileIcon.setImageBitmap(albumCovers.get(pos));
-//                            			} else {
-//                            				holder.fileIcon.setImageResource(R.drawable.dir);
-//                            			}
-//                    		        }
-//                               	});										    			
-//                			} else {
-//                				if (!trackTitles.containsKey(pos)) {
-////                					AudioFile afile = null;	
-////                					try {
-////                						afile = AudioFileIO.read(item);
-////                						trackTitles.put(pos, afile.getTag().getFirst(FieldKey.TITLE));			            		
-////                					} catch (CannotReadException e) {
-////                						e.printStackTrace();
-////                					} catch (IOException e) {
-////                						e.printStackTrace();
-////                					} catch (TagException e) {
-////                						e.printStackTrace();
-////                					} catch (ReadOnlyFileException e) {
-////                						e.printStackTrace();
-////                					} catch (InvalidAudioFrameException e) {
-////                						e.printStackTrace();
-////                					}
-//                				}
-//                            	runOnUiThread(new Runnable() {
-//                            		@Override
-//                            		public void run() {
-//                            			holder.fileName.setText(trackTitles.get(pos));
-//                            		}
-//                				});
-//                			}
-//                			mutex.notify();
-//            			}
-//            		}
-//				}).start();
-                
                 return v;
             };    		
     	};
@@ -207,15 +127,15 @@ public class FileBrowserActivity extends Activity {
     
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-    	if ((keyCode == KeyEvent.KEYCODE_BACK) && prevDirs.size() > 0) {
-    		browse(prevDirs.pop());
+    	if ((keyCode == KeyEvent.KEYCODE_BACK) && dirHistory.size() > 1) {
+    		browse(new File(dirHistory.pop().getPath()));
     		return true;
    		}
     	return super.onKeyDown(keyCode, event);
     }
     
-    private void browse(MusicFile dir) {    	
-    	if (dir.compareTo(new MusicFile(Environment.getExternalStorageDirectory().getAbsolutePath())) == 0) {
+    private void browse(File dir) {    	
+    	if (dir.compareTo(new File(Environment.getExternalStorageDirectory().getAbsolutePath())) == 0) {
     		parentAllowed = false;
     	} else {
     		parentAllowed = true;
@@ -253,29 +173,19 @@ public class FileBrowserActivity extends Activity {
 			}
 		});	
     	for (File file : fileList) {
-    		currentFiles.add(new MusicFile(file.getAbsolutePath()));
+    		currentFiles.add(new File(file.getAbsolutePath()));
     	}    	
-
     	fileListAdapter.clear();
-    	fileListAdapter.add(new MusicFile(".."));
-    	for (MusicFile f : currentFiles) fileListAdapter.add(f);
-    	
-    	currentDirView.setText(currentDir.getAbsolutePath());
-    	albumCovers.clear();
-    	trackTitles.clear();
+    	fileListAdapter.add(new File(".."));
+    	for (File f : currentFiles) {
+    		fileListAdapter.add(f);
+    	}
     	fileListAdapter.notifyDataSetChanged();
-    	if (currentDir.getListPos() != -1) {
-    		fileListView.setSelection(currentDir.getListPos());
-		}
+    	currentDirView.setText(currentDir.getAbsolutePath());
+   		fileListView.setSelection(dirHistory.lastElement().getPos());
     }
-    
-	static private class ViewHolder {
-		
-		TextView fileName;
-		ImageView fileIcon;
-	}
 	
-    public class PlayerServiceConnection implements ServiceConnection {
+    private class PlayerServiceConnection implements ServiceConnection {
 		
 		@Override
 		public void onServiceDisconnected(ComponentName arg0) {
@@ -286,5 +196,30 @@ public class FileBrowserActivity extends Activity {
 			PlayerBinder playerBinder = (PlayerBinder)service;
 			playerService = playerBinder.getService();
 		}
-	};
+	}
+    
+	private class ViewHolder {
+
+		TextView fileName;
+		ImageView fileIcon;
+	}
+	
+	private class Dir {
+
+		private String path;
+		private int pos;
+		
+		public Dir(String path, int pos) {
+			this.path = path;
+			this.pos = pos;
+		}
+		
+		public String getPath() {
+			return path;
+		}
+		
+		public int getPos() {
+			return pos;
+		}
+	}
 }
