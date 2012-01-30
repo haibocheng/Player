@@ -198,8 +198,7 @@ public class FileBrowserActivity extends Activity {
 		}
 	}
     
-	private class ViewHolder {
-
+	static private class ViewHolder {
 		TextView fileName;
 		ImageView fileIcon;
 	}
