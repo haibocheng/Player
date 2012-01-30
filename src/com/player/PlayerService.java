@@ -18,7 +18,7 @@ import android.provider.MediaStore.Audio;
 
 public class PlayerService extends Service {
 	
-	static public final int STOPED = 0, PLAYING = 1, PAUSED = 2;	
+	static public final int STOPED = 0, PLAYING = 1, PAUSED = 2, GHOST = 3;	
 	private MediaPlayer mediaPlayer;
 	private ArrayList<Track> currentTracks;
 	private int currentTrackPosition;
@@ -102,8 +102,12 @@ public class PlayerService extends Service {
 	}
 	
 	public void deleteTrack(int pos) {
-		if (pos < currentTrackPosition) currentTrackPosition--;
-		if (pos == currentTrackPosition) currentTrackPosition = -2;
+		if (pos < currentTrackPosition) {
+			currentTrackPosition--;
+		}
+		if (pos == currentTrackPosition) {
+			ghost();
+		}
 		currentTracks.remove(pos);
 		untake();
 	}
@@ -178,6 +182,11 @@ public class PlayerService extends Service {
 		untake();
 	}
 	
+	private void ghost() {
+		status = GHOST;
+		currentTrackPosition = -2;		
+	}
+	
 	public void nextTrack() {
 		if (currentTrackPosition < currentTracks.size()-1) {
 			playTrack(currentTrackPosition+1);
@@ -206,6 +215,8 @@ public class PlayerService extends Service {
 	public int getCurrentTrackDuration() {
 		switch (status) {
 		case STOPED:
+			return 0;
+		case GHOST:
 			return 0;
 		default:
 			return currentTracks.get(currentTrackPosition).getDuration();
