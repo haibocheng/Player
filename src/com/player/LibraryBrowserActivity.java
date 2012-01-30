@@ -3,7 +3,6 @@ package com.player;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
-
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
