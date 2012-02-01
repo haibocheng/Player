@@ -15,10 +15,11 @@ import android.media.MediaPlayer.OnCompletionListener;
 import android.os.Binder;
 import android.os.IBinder;
 import android.provider.MediaStore.Audio;
+import android.widget.Toast;
 
 public class PlayerService extends Service {
 	
-	static public final int STOPED = 0, PLAYING = 1, PAUSED = 2, GHOST = 3;	
+	static public final int STOPED = -1, PAUSED = 0, PLAYING = 1;	
 	private MediaPlayer mediaPlayer;
 	private ArrayList<Track> currentTracks;
 	private int currentTrackPosition;
@@ -101,12 +102,12 @@ public class PlayerService extends Service {
 		untake();
 	}
 	
-	public void deleteTrack(int pos) {
+	public void removeTrack(int pos) {
+		if (pos == currentTrackPosition) {
+			stop();
+		}
 		if (pos < currentTrackPosition) {
 			currentTrackPosition--;
-		}
-		if (pos == currentTrackPosition) {
-			ghost();
 		}
 		currentTracks.remove(pos);
 		untake();
@@ -182,11 +183,6 @@ public class PlayerService extends Service {
 		untake();
 	}
 	
-	private void ghost() {
-		status = GHOST;
-		currentTrackPosition = -2;		
-	}
-	
 	public void nextTrack() {
 		if (currentTrackPosition < currentTracks.size()-1) {
 			playTrack(currentTrackPosition+1);
@@ -204,28 +200,26 @@ public class PlayerService extends Service {
 	}
 	
 	public int getCurrentPosition() {
-		switch (status) {
-		case STOPED:
-			return 0;
-		default:
+		if (status > STOPED) {
 			return mediaPlayer.getCurrentPosition();
+		} else {
+			return 0;
 		}
 	}
 	
 	public int getCurrentTrackDuration() {
-		switch (status) {
-		case STOPED:
-			return 0;
-		case GHOST:
-			return 0;
-		default:
+		if (status > STOPED) {
 			return currentTracks.get(currentTrackPosition).getDuration();
+		} else {
+			return 0;
 		}
 	}
 	
 	public void seek(int s) {
-		mediaPlayer.seekTo(s);
-		untake();
+		if (status > STOPED) {
+			mediaPlayer.seekTo(s);
+			untake();
+		}
 	}
 	
 	public boolean isTaken() {

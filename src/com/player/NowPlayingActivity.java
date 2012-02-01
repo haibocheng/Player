@@ -277,7 +277,7 @@ public class NowPlayingActivity extends Activity {
     	AdapterContextMenuInfo info = (AdapterContextMenuInfo)item.getMenuInfo();
     	switch (item.getItemId()) {
     	case R.id.track_menu_remove:
-    		playerService.deleteTrack(info.position);
+    		playerService.removeTrack(info.position);
     	break;
     	case R.id.track_menu_info:
     		Track currentTrack = playerService.getTrack(info.position);
