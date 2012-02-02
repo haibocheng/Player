@@ -22,9 +22,9 @@ public class DbOpenHelper extends SQLiteOpenHelper {
         db.execSQL(TABLE_CREATE);
     }
 
-	@Override
-	public void onUpgrade(SQLiteDatabase db, int arg1, int arg2) {
-		 db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
-		 onCreate(db);
-	}
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int arg1, int arg2) {
+         db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
+         onCreate(db);
+    }
 }
