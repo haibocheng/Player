@@ -122,11 +122,11 @@ public class NowPlayingActivity extends Activity {
 					
 					@Override
 					public void run() {
-						currentTrackProgressView.setText(PlayerService.formatDuration(pos));
+						currentTrackProgressView.setText(PlayerService.formatTrackDuration(pos));
 					}
 				});
 				if (user) {
-					playerService.seek(pos);
+					playerService.seekTrack(pos);
 				} 
 			}		
 			
@@ -169,7 +169,7 @@ public class NowPlayingActivity extends Activity {
     			String title = track.getTitle(), artist = track.getArtist();
     			holder.title.setText(title);
     			holder.artist.setText(artist);
-    			holder.duration.setText(PlayerService.formatDuration(track.getDuration()));
+    			holder.duration.setText(PlayerService.formatTrackDuration(track.getDuration()));
     			if (pos == playerService.getCurrentTrackPosition()) {
     				holder.playicon.setImageResource(R.drawable.playicon);
     			} else {
@@ -215,8 +215,8 @@ public class NowPlayingActivity extends Activity {
 	
     public void refreshTrack() {
     	
-			final int progress = playerService.getCurrentPosition(), max = playerService.getCurrentTrackDuration();
-			final String durationText = PlayerService.formatDuration(playerService.getCurrentTrackDuration()), progressText = PlayerService.formatDuration(playerService.getCurrentPosition());
+			final int progress = playerService.getCurrentTrackProgress(), max = playerService.getCurrentTrackDuration();
+			final String durationText = PlayerService.formatTrackDuration(playerService.getCurrentTrackDuration()), progressText = PlayerService.formatTrackDuration(playerService.getCurrentTrackProgress());
 			runOnUiThread(new Runnable() {
 
 				@Override
@@ -231,7 +231,7 @@ public class NowPlayingActivity extends Activity {
 
     public void refreshTracklist() {
 
-    	final ArrayList<Track> currentTracks = playerService.getCurrentTracks();
+    	final ArrayList<Track> currentTracks = playerService.getTracklist();
     	final int currentTrackPosition = playerService.getCurrentTrackPosition();
 		runOnUiThread(new Runnable() {
 

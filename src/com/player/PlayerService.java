@@ -21,9 +21,8 @@ public class PlayerService extends Service {
 	
 	static public final int STOPED = -1, PAUSED = 0, PLAYING = 1;	
 	private MediaPlayer mediaPlayer;
-	private ArrayList<Track> currentTracks;
-	private int currentTrackPosition;
-	private int status;
+	private ArrayList<Track> tracklist;
+	private int status, currentTrackPosition;
 	private boolean taken;
 	private IBinder playerBinder;
 	
@@ -32,16 +31,16 @@ public class PlayerService extends Service {
 		super.onCreate();
 
 		mediaPlayer = new MediaPlayer();
-		currentTracks = new ArrayList<Track>();
+		tracklist = new ArrayList<Track>();
 		currentTrackPosition = -1;
-		status = STOPED;
+		setStatus(STOPED);
 		playerBinder = new PlayerBinder();
 		
 		mediaPlayer.setOnCompletionListener(new OnCompletionListener() {
 			
 			@Override
 			public void onCompletion(MediaPlayer arg0) {
-				if (currentTrackPosition == -2 || currentTrackPosition == currentTracks.size()-1) {
+				if (currentTrackPosition == tracklist.size()-1) {
 					stop();
 				} else {
 					nextTrack();
@@ -61,30 +60,42 @@ public class PlayerService extends Service {
 		return super.onUnbind(intent);
 	}
 
-	public void take() {
+	public void take() {	
 		taken = true;
 	}
 	
-	public void untake() {
+	private void untake() {
 		synchronized (this) {
 			taken = false;
 			notifyAll();
 		}
 	}
 	
-	public ArrayList<Track> getCurrentTracks() {
-		return currentTracks;
+	public boolean isTaken() {
+		return taken;
+	}	
+	
+	private void setStatus(int s) {
+		setStatus(s);
+	}
+	
+	public int getStatus() {
+		return status;
+	}
+	
+	public ArrayList<Track> getTracklist() {
+		return tracklist;
 	}
 	
 	public Track getTrack(int pos) {
-		return currentTracks.get(pos);
+		return tracklist.get(pos);
 	}
 	
 	public Track getCurrentTrack() {
 		if (currentTrackPosition < 0) {
 			return null;
 		} else {
-			return currentTracks.get(currentTrackPosition);
+			return tracklist.get(currentTrackPosition);
 		}
 	}
 	
@@ -93,12 +104,12 @@ public class PlayerService extends Service {
 	}
 	
 	public void addTrack(Track track) {
-		currentTracks.add(track);
+		tracklist.add(track);
 		untake();
 	}
 	
 	public void addTrack(int id) {
-		currentTracks.add(new Track(id));
+		tracklist.add(new Track(id));
 		untake();
 	}
 	
@@ -109,26 +120,25 @@ public class PlayerService extends Service {
 		if (pos < currentTrackPosition) {
 			currentTrackPosition--;
 		}
-		currentTracks.remove(pos);
+		tracklist.remove(pos);
 		untake();
 	}
 	
 	public void clearTracklist() {
-		if (currentTrackPosition >= 0) {
+		if (status > STOPED) {
 			stop();
 		}
-		currentTracks.clear();
+		tracklist.clear();
 		untake();
 	}
 	
 	public void playTrack(int pos) {
-		if (mediaPlayer.isPlaying()) {
-			mediaPlayer.stop();
-		}
-		mediaPlayer.reset();
+		if (status > STOPED) {
+			stop();
+		}		
 		FileInputStream file = null;
 		try {
-			file = new FileInputStream(new File(currentTracks.get(pos).getPath()));
+			file = new FileInputStream(new File(tracklist.get(pos).getPath()));
 			mediaPlayer.setDataSource(file.getFD());
 			mediaPlayer.prepare();
 		} catch (FileNotFoundException e) {
@@ -142,7 +152,7 @@ public class PlayerService extends Service {
 		}
 		mediaPlayer.start();
 		currentTrackPosition = pos;
-		status = PLAYING;
+		setStatus(PLAYING);
 		untake();
 	}
 	
@@ -153,17 +163,17 @@ public class PlayerService extends Service {
 	public void play() {
 		switch (status) {
 		case STOPED:
-			if (!currentTracks.isEmpty()) {
-				play(0);
+			if (!tracklist.isEmpty()) {
+				playTrack(0);
 			}
 		break;
 		case PLAYING:
 			mediaPlayer.pause();
-			status = PAUSED;
+			setStatus(PAUSED);
 		break;
 		case PAUSED:
 			mediaPlayer.start();
-			status = PLAYING;
+			setStatus(PLAYING);
 		break;
 		}
 		untake();
@@ -171,7 +181,7 @@ public class PlayerService extends Service {
 	
 	public void pause() {
 		mediaPlayer.pause();
-		status = PAUSED;
+		setStatus(PAUSED);
 		untake();
 	}
 	
@@ -179,12 +189,12 @@ public class PlayerService extends Service {
 		mediaPlayer.stop();
 		mediaPlayer.reset();
 		currentTrackPosition = -1;
-		status = STOPED;
+		setStatus(STOPED);
 		untake();
 	}
 	
 	public void nextTrack() {
-		if (currentTrackPosition < currentTracks.size()-1) {
+		if (currentTrackPosition < tracklist.size()-1) {
 			playTrack(currentTrackPosition+1);
 		}		
 	}
@@ -194,12 +204,8 @@ public class PlayerService extends Service {
 			playTrack(currentTrackPosition-1);
 		}
 	}
-	
-	public int getStatus() {
-		return status;
-	}
-	
-	public int getCurrentPosition() {
+
+	public int getCurrentTrackProgress() {
 		if (status > STOPED) {
 			return mediaPlayer.getCurrentPosition();
 		} else {
@@ -209,35 +215,28 @@ public class PlayerService extends Service {
 	
 	public int getCurrentTrackDuration() {
 		if (status > STOPED) {
-			return currentTracks.get(currentTrackPosition).getDuration();
+			return tracklist.get(currentTrackPosition).getDuration();
 		} else {
 			return 0;
 		}
 	}
 	
-	public void seek(int s) {
+	public void seekTrack(int p) {
 		if (status > STOPED) {
-			mediaPlayer.seekTo(s);
+			mediaPlayer.seekTo(p);
 			untake();
 		}
 	}
-	
-	public boolean isTaken() {
-		return taken;
-	}	
 	
 	public void storeTracklist() {
 		DbOpenHelper dbOpenHelper = new DbOpenHelper(getApplicationContext());
 		SQLiteDatabase db = dbOpenHelper.getWritableDatabase();
 		dbOpenHelper.onUpgrade(db, 1, 1);
-		int i = 0;
-		for
-		(Track track : currentTracks) {
+		for (int i = 0; i < tracklist.size(); i++) {
 			ContentValues c = new ContentValues();
 			c.put(DbOpenHelper.KEY_POSITION, i);
-			c.put(DbOpenHelper.KEY_FILE, track.getPath());
+			c.put(DbOpenHelper.KEY_FILE, tracklist.get(i).getPath());
 			db.insert(DbOpenHelper.TABLE_NAME, null, c);
-			i++;
 		}
 		dbOpenHelper.close();
 	}
@@ -245,9 +244,10 @@ public class PlayerService extends Service {
 	private void restoreTracklist() {
 		DbOpenHelper dbOpenHelper = new DbOpenHelper(getApplicationContext());
 		SQLiteDatabase db = dbOpenHelper.getReadableDatabase();
-		Cursor c = db.query(DbOpenHelper.TABLE_NAME, null, null, null, null, null, null);		
+		Cursor c = db.query(DbOpenHelper.TABLE_NAME, null, null, null, null, null, null);
+		tracklist.clear();
 		while (c.moveToNext()) {
-			currentTracks.add(new Track(c.getString(1)));
+			tracklist.add(new Track(c.getString(1)));
 		}
 		dbOpenHelper.close();
 	}
@@ -262,7 +262,7 @@ public class PlayerService extends Service {
 	public class Track {
 
 		private String path, artist, album, year, title, genre;
-		private int id, duration = 0;		
+		private int id, duration;		
 		
 		public Track(String p) {
 			path = p;
@@ -322,7 +322,7 @@ public class PlayerService extends Service {
 		}
 	}
 	
-	public static String formatDuration(int d) {
+	public static String formatTrackDuration(int d) {
     	String min = Integer.toString((d/1000)/60);
     	String sec = Integer.toString((d/1000)%60);
     	if (sec.length() == 1) sec = "0"+sec;
