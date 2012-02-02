@@ -323,9 +323,9 @@ public class PlayerService extends Service {
 	}
 	
 	public static String formatTrackDuration(int d) {
-    	String min = Integer.toString((d/1000)/60);
-    	String sec = Integer.toString((d/1000)%60);
-    	if (sec.length() == 1) sec = "0"+sec;
-    	return min+":"+sec;
+		String min = Integer.toString((d/1000)/60);
+		String sec = Integer.toString((d/1000)%60);
+		if (sec.length() == 1) sec = "0"+sec;
+		return min+":"+sec;
 	}
 }
