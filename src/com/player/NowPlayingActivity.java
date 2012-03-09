@@ -213,7 +213,7 @@ public class NowPlayingActivity extends Activity {
         getApplicationContext().unbindService(playerServiceConnection);
     }
 
-    public void refreshTrack() {
+    private void refreshTrack() {
 
             final int progress = playerService.getCurrentTrackProgress(), max = playerService.getCurrentTrackDuration();
             final String durationText = PlayerService.formatTrackDuration(playerService.getCurrentTrackDuration()), progressText = PlayerService.formatTrackDuration(playerService.getCurrentTrackProgress());
@@ -229,7 +229,7 @@ public class NowPlayingActivity extends Activity {
             });
     }
 
-    public void refreshTracklist() {
+    private void refreshTracklist() {
 
         final ArrayList<Track> currentTracks = playerService.getTracklist();
         final int currentTrackPosition = playerService.getCurrentTrackPosition();
@@ -247,7 +247,7 @@ public class NowPlayingActivity extends Activity {
         });
     }
 
-    public void refreshButtons() {
+    private void refreshButtons() {
         runOnUiThread(new Runnable() {
 
             @Override
@@ -346,6 +346,7 @@ public class NowPlayingActivity extends Activity {
     }
 
     static private class ViewHolder {
+
         TextView title;
         TextView artist;
         TextView duration;
