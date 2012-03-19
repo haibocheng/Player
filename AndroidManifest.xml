@@ -7,7 +7,7 @@
     <uses-sdk android:minSdkVersion="8" />
     <application android:label="@string/app_name" android:icon="@drawable/icon2">
         
-		<service android:name=".PlayerService" />
+		<service android:name="com.zanehuy.player.PlayerService" />
         <activity android:name="com.zanehuy.player.MainActivity" android:theme="@android:style/Theme.NoTitleBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
